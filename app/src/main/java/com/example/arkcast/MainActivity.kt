@@ -82,38 +82,38 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Couldn't open settings", Toast.LENGTH_SHORT).show()
         }
     }
+}
 
-    @Composable
-    fun ScreenCastHelperUI(onTryAgainClick: () -> Unit, onOpenSettingsClick: () -> Unit) {
-        Surface(
+@Composable
+fun ScreenCastHelperUI(onTryAgainClick: () -> Unit, onOpenSettingsClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
             modifier = Modifier
-                .fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Couldn't launch screen cast settings",
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
+            Text(
+                "Couldn't launch screen cast settings",
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center
+            )
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Button(onClick = onTryAgainClick){
-                    Text("Try Again")
-                }
+            Button(onClick = onTryAgainClick){
+                Text("Try Again")
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-                Button(onClick = onOpenSettingsClick) {
-                    Text("Open Settings")
-                }
+            Button(onClick = onOpenSettingsClick) {
+                Text("Open Settings")
             }
         }
     }

@@ -29,92 +29,65 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var appUpdateService: AppUpdateService
+    private val coroutineScope = CoroutineScope(Dispatchers.Main)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!launchScreenCast()){
-            setContent {
-                ScreenCastHelperUI(
-                    onTryAgainClick = { launchScreenCast() },
-                    onOpenSettingsClick = { openSettings()}
-                )
-            }
-        }
+        appUpdateService = AppUpdateService(this)
+        checkAndRoute()
     }
 
-    private fun launchScreenCast(): Boolean {
-        val intents = listOf(
-            //Google/AOSP Cast Intent
-            Intent("android.settings.CAST_SETTINGS"),
+    private fun checkAndRoute() {
+        val service = RetrofitClient.instance
+        val currentVersionCode = getCurrentAppVersionCode()
 
-            //Fallback to standard settings
-            Intent(Settings.ACTION_CAST_SETTINGS),
-            Intent(Settings.ACTION_DISPLAY_SETTINGS),
-            Intent(Settings.ACTION_WIRELESS_SETTINGS),
-        )
+        service.getAppUpdateDetails().enqueue(object : Callback<AppUpdateResponse> {
+            override fun onResponse(
+                call: Call<AppUpdateResponse>,
+                response: Response<AppUpdateResponse>
+            ) {
+                if (response.isSuccessful) {
+                    val appUpdateResponse = response.body()
+                    val remoteVersionCode =
+                        appUpdateResponse?.elements?.getOrNull(0)?.versionCode ?: -1
 
-        // Try each intent until one works
-        for (intent in intents) {
-            try {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)
-                finish() // Close app after launching
-                return true
-            } catch (e: Exception) {
-                //Try the next one if the intent didn't work
-                continue
+                    if (remoteVersionCode > currentVersionCode) {
+                        appUpdateService.checkForAppUpdate()
+                    } else {
+                        routeToCastActivity()
+                    }
+                } else {
+                    routeToCastActivity()
+                }
             }
-        }
 
-        return false
+            override fun onFailure(call: Call<AppUpdateResponse>, t: Throwable) {
+                routeToCastActivity()
+            }
+        })
     }
 
-    private fun openSettings(){
-        try {
-            val settingsIntent = Intent(Settings.ACTION_SETTINGS)
-            settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            settingsIntent.addCategory(Intent.CATEGORY_DEFAULT)
-            startActivity(settingsIntent)
+    private fun routeToCastActivity() {
+        startActivity(Intent(this@MainActivity, CastActivity::class.java))
+        finish()
+    }
+
+    private fun getCurrentAppVersionCode(): Int {
+        return try {
+            packageManager.getPackageInfo(packageName, 0).versionCode
         } catch (e: Exception) {
-            Toast.makeText(this, "Couldn't open settings", Toast.LENGTH_SHORT).show()
-        }
-    }
-}
-
-@Composable
-fun ScreenCastHelperUI(onTryAgainClick: () -> Unit, onOpenSettingsClick: () -> Unit) {
-    Surface(
-        modifier = Modifier
-            .fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "Couldn't launch screen cast settings",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(onClick = onTryAgainClick){
-                Text("Try Again")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(onClick = onOpenSettingsClick) {
-                Text("Open Settings")
-            }
+            -1
         }
     }
 }
